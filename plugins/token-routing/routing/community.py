@@ -3,15 +3,23 @@
 
 Usage:
   community.py export          # write history/community-export.json (anonymous, aggregated)
-  community.py sync-defaults   # adopt new plugin defaults for cells you never tuned locally
+  community.py sync-defaults   # adopt new plugin defaults for cells you never tuned locally, and new lessons
+  community.py submit-personal [--repo OWNER/NAME]
+                               # send results + lessons of this project to YOUR PRIVATE repo only
+  community.py submit-community
+                               # export anonymous counts and open the public feedback issue (needs gh)
 
 What export contains: counts per category x tier and per tier-score pattern (S C R V), routes as
 "model/effort" strings, failure-type counts, average tokens. Nothing else: no task titles, goals,
 file names, paths, code, logs, run IDs or dates of single tasks.
 Each export is cumulative and replaces your previous submission (same random contributor ID).
 """
+import base64
 import json
+import os
 import re
+import shutil
+import subprocess
 import sys
 import uuid
 from collections import Counter, defaultdict
@@ -23,6 +31,7 @@ from _paths import DEFAULTS, data_dir  # noqa: E402
 import metrics  # noqa: E402
 
 SCHEMA = "token-routing-feedback/1"
+PERSONAL_SCHEMA = "token-routing-personal/1"
 SCORE_RE = re.compile(r"S([0-2])\s*C([0-2])\s*R([0-2])\s*V([0-2])")
 REPO = "Marco-Bonito/Claude_token_reduction_bundle"
 
@@ -52,7 +61,7 @@ def norm_score(s):
     return "S{} C{} R{} V{}".format(*m.groups()) if m else None
 
 
-def export():
+def build_doc():
     rows = metrics.read_metrics()
     if not rows:
         sys.exit("No metrics yet. Run some /orchestrate runs first.")
@@ -99,9 +108,14 @@ def export():
     out_scores = {k: {"tasks": s["tasks"], "first_pass": s["first_pass"], "win_routes": dict(s["win_routes"])}
                   for k, s in scores.items()}
     t = metrics.load_table()
-    doc = {"schema": SCHEMA, "contributor": contributor_id(), "plugin_version": plugin_version(),
-           "table_version": t.get("version", 1), "defaults_version": t.get("defaults_version", 1),
-           "cells": out_cells, "scores": out_scores}
+    return {"schema": SCHEMA, "contributor": contributor_id(), "plugin_version": plugin_version(),
+            "table_version": t.get("version", 1), "defaults_version": t.get("defaults_version", 1),
+            "cells": out_cells, "scores": out_scores}
+
+
+def export():
+    doc = build_doc()
+    out_cells = doc["cells"]
     path = metrics.HIST / "community-export.json"
     text = json.dumps(doc, indent=1, sort_keys=True)
     path.write_text(text + "\n", encoding="utf-8")
@@ -114,6 +128,75 @@ def export():
     print("  and paste the file content.")
     print("Share it, option 2 (GitHub CLI):")
     print(f'  gh issue create --repo {REPO} --title "Routing feedback" --body-file "{issue}"')
+
+def personal_repo(argv):
+    if "--repo" in argv:
+        return argv[argv.index("--repo") + 1]
+    env = os.environ.get("TOKEN_ROUTING_PERSONAL_REPO")
+    if env:
+        return env
+    return metrics.load_table().get("improver", {}).get("personal_repo")
+
+
+def submit_personal(argv):
+    """Send this project's results + lessons to YOUR private repo. Never to the public one."""
+    doc = build_doc()
+    doc["schema"] = PERSONAL_SCHEMA
+    doc["project"] = data_dir().parent.parent.name
+    lessons = data_dir() / "lessons.md"
+    doc["lessons"] = [l.strip() for l in lessons.read_text(encoding="utf-8").splitlines()
+                      if l.strip().startswith("- [")] if lessons.exists() else []
+    path = metrics.HIST / "personal-export.json"
+    path.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    repo = personal_repo(argv)
+    if not repo:
+        print(f"Wrote {path}. No personal repo set: pass --repo OWNER/NAME, or set improver.personal_repo in the table.")
+        return
+    if repo.lower() == REPO.lower():
+        sys.exit("Refused: the personal export must not go to the public community repo.")
+    if not shutil.which("gh"):
+        print(f"Wrote {path}. GitHub CLI not found. Upload it by hand to {repo}: submissions/{doc['contributor']}.json")
+        return
+    target = f"repos/{repo}/contents/submissions/{doc['contributor']}.json"
+    sha = subprocess.run(["gh", "api", target, "--jq", ".sha"], capture_output=True, text=True).stdout.strip()
+    body = {"message": f"Personal routing data from {doc['project']}",
+            "content": base64.b64encode(path.read_bytes()).decode()}
+    if sha and len(sha) == 40:
+        body["sha"] = sha
+    r = subprocess.run(["gh", "api", "-X", "PUT", target, "--input", "-"], input=json.dumps(body),
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit(f"Upload failed: {r.stderr.strip()[:300]}")
+    print(json.dumps({"submitted": True, "repo": repo, "project": doc["project"],
+                      "tasks": sum(c["tasks"] for c in doc["cells"].values()), "lessons": len(doc["lessons"])}))
+
+
+def submit_community():
+    """Export anonymous counts and open a 'Routing feedback' issue on the public repo (needs gh)."""
+    export()
+    issue = metrics.HIST / "community-issue.md"
+    if not shutil.which("gh"):
+        print("GitHub CLI not found: submit with the browser link above.")
+        return
+    r = subprocess.run(["gh", "issue", "create", "--repo", REPO, "--title", "Routing feedback", "--body-file", str(issue)],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit(f"Issue creation failed: {r.stderr.strip()[:300]}")
+    print(json.dumps({"submitted": True, "issue": r.stdout.strip()}))
+
+
+def sync_lessons():
+    src, dst = DEFAULTS / "lessons.md", data_dir() / "lessons.md"
+    if not src.exists():
+        return 0
+    have = {l.strip() for l in dst.read_text(encoding="utf-8").splitlines()} if dst.exists() else set()
+    new = [l.strip() for l in src.read_text(encoding="utf-8").splitlines()
+           if l.strip().startswith("- [") and l.strip() not in have]
+    if new:
+        with dst.open("a", encoding="utf-8") as f:
+            f.write("\n" + "\n".join(new) + "\n")
+    return len(new)
+
 
 def sync_defaults():
     t = metrics.load_table()
@@ -136,8 +219,9 @@ def sync_defaults():
             changes.append(f"- {key}: {lad[cur]['model']}/{lad[cur]['effort']} -> {lad[idx]['model']}/{lad[idx]['effort']} (community default)")
             t["categories"][cat]["tiers"][i] = idx
     dv = d.get("defaults_version", 1)
+    added_lessons = sync_lessons()
     if not changes and t.get("defaults_version", 1) == dv:
-        print(json.dumps({"synced": 0}))
+        print(json.dumps({"synced": 0, "lessons_added": added_lessons}))
         return
     old_v = t.get("version", 1)
     metrics.VERSIONS.mkdir(parents=True, exist_ok=True)
@@ -154,7 +238,7 @@ def sync_defaults():
     metrics.save_table(t)
     with (metrics.HIST / "CHANGELOG.md").open("a", encoding="utf-8") as f:
         f.write(f"\n## v{t['version']} — {metrics.now()} sync to community defaults v{dv}\n" + "\n".join(changes) + "\n")
-    print(json.dumps({"synced": len(changes), "version": t["version"], "defaults_version": dv}))
+    print(json.dumps({"synced": len(changes), "version": t["version"], "defaults_version": dv, "lessons_added": added_lessons}))
 
 
 def main(a):
@@ -164,6 +248,10 @@ def main(a):
         return export()
     if a[1] == "sync-defaults":
         return sync_defaults()
+    if a[1] == "submit-personal":
+        return submit_personal(a)
+    if a[1] == "submit-community":
+        return submit_community()
     sys.exit(f"unknown command {a[1]}")
 
 

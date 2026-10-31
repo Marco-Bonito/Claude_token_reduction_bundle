@@ -25,6 +25,10 @@ Names: in a plugin install, agents and skills can have the prefix `token-routing
 
 Undo a table change with `metrics.py rollback`. List the versions with `metrics.py versions`.
 
+## Personal repo (automatic, private)
+
+If `improver.personal_repo` is set in the project table, run `community.py submit-personal` at the end of every cycle. It sends this project's results and lessons ONLY to that private repo. Tell the user in one line.
+
 ## Share with the community (opt-in)
 
-At the end, if the user has 20+ finished tasks, ask once: "Share anonymous routing results to improve the defaults for everyone?" If yes, run `community.py export` and give the user the 2 options it prints (browser or GitHub CLI). Never submit without an explicit yes.
+If `improver.community_auto_share` is `true`, run `community.py submit-community` at the end of every cycle without asking. Otherwise: at the end, if the user has 20+ finished tasks, ask once: "Share anonymous routing results to improve the defaults for everyone?" If yes, run `community.py submit-community`. If the GitHub CLI is missing, give the user the browser link it prints. Never submit without an explicit yes.

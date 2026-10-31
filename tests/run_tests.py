@@ -171,5 +171,24 @@ newdef["defaults_version"] = 3
 js("community.py", "sync-defaults")
 check("sync keeps locally tuned cells", js("route.py", "base", "debug", 4)["model"] == "opus")
 
+# ---- personal version
+p = subprocess.run([sys.executable, str(R / "community.py"), "submit-personal"], capture_output=True, text=True, env=ENV, cwd=TMP)
+pe = TMP / "data" / "history" / "personal-export.json"
+check("personal export written without repo", p.returncode == 0 and pe.exists(), p.stdout + p.stderr)
+pdoc = json.loads(pe.read_text())
+check("personal export has lessons", pdoc["schema"] == "token-routing-personal/1" and len(pdoc["lessons"]) >= 1)
+core = {k: v for k, v in pdoc.items() if k not in ("lessons", "project")}
+core["schema"] = "token-routing-feedback/1"
+f = TMP / "core.json"
+f.write_text(json.dumps(core))
+check("personal core passes strict schema", validate(f)[0] == 0)
+p = subprocess.run([sys.executable, str(R / "community.py"), "submit-personal", "--repo", "marco-bonito/claude_token_reduction_bundle"],
+                   capture_output=True, text=True, env=ENV, cwd=TMP)
+check("refuses public repo as personal target", p.returncode != 0 and "Refused" in (p.stdout + p.stderr))
+(deftable / "lessons.md").write_text((deftable / "lessons.md").read_text() + "- [code] Run the linter before goal_met.\n")
+s2 = js("community.py", "sync-defaults")
+check("sync adds new lessons", s2.get("lessons_added") == 1 and "Run the linter" in (TMP / "data" / "lessons.md").read_text(), s2)
+check("lessons sync idempotent", js("community.py", "sync-defaults").get("lessons_added") == 0)
+
 print(f"\n{'ALL PASSED' if not FAILS else f'{len(FAILS)} FAILED'}  (temp: {TMP})")
 sys.exit(1 if FAILS else 0)
