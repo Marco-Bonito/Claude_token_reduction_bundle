@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+# Local test output and run folders of this repo itself
+.claude/runs/
+.claude/routing/

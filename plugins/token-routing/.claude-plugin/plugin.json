@@ -1,0 +1,10 @@
+{
+  "name": "token-routing",
+  "version": "1.0.0",
+  "description": "Plan, decompose and route Claude Code work to the cheapest model and effort that succeeds, with reviewed retries and a self-improving routing table.",
+  "author": { "name": "Marco Bonito", "url": "https://github.com/Marco-Bonito" },
+  "homepage": "https://github.com/Marco-Bonito/Claude_token_reduction_bundle",
+  "repository": "https://github.com/Marco-Bonito/Claude_token_reduction_bundle",
+  "license": "MIT",
+  "keywords": ["routing", "subagents", "token-usage", "cost", "orchestration", "model-selection"]
+}

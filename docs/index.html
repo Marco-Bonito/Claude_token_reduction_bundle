@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>token-routing — visual guide</title>
+<style>
+  :root { --bg:#fbfaf7; --card:#ffffff; --text:#22211f; --muted:#6b6a65; --line:#e4e2db; --accent:#534AB7; --accent-bg:#EEEDFE;
+          --h:#E6F1FB; --h-t:#0C447C; --s:#EEEDFE; --s-t:#3C3489; --o:#FAECE7; --o-t:#712B13; --f:#FAEEDA; --f-t:#633806; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1a18; --card:#25241f; --text:#ecebe6; --muted:#a3a19a; --line:#3a3933; --accent:#AFA9EC; --accent-bg:#2f2b55;
+            --h:#0C447C; --h-t:#E6F1FB; --s:#3C3489; --s-t:#EEEDFE; --o:#712B13; --o-t:#FAECE7; --f:#633806; --f-t:#FAEEDA; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: 30px; font-weight: 600; margin: 0 0 6px; }
+  h2 { font-size: 21px; font-weight: 600; margin: 48px 0 12px; }
+  p.lead { color: var(--muted); font-size: 18px; margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin: 14px 0; overflow-x: auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .pill { display:inline-block; padding: 2px 10px; border-radius: 999px; background: var(--accent-bg); color: var(--accent); font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; }
+  td.r { border-radius: 6px; text-align: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .haiku { background: var(--h); color: var(--h-t); } .sonnet { background: var(--s); color: var(--s-t); }
+  .opus { background: var(--o); color: var(--o-t); } .fable { background: var(--f); color: var(--f-t); }
+  code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 8px 0; }
+  ol.steps { padding-left: 22px; } ol.steps li { margin: 6px 0; }
+  .legend span { margin-right: 14px; font-size: 13px; } .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:5px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <span class="pill">Claude Code plugin · MIT</span>
+  <h1>token-routing</h1>
+  <p class="lead">Each task goes to the cheapest model and effort that can do it. The result is checked. Retries escalate only on failure. The table learns from every run.</p>
+
+  <div class="grid">
+    <div class="card"><b>Script routing</b><br>A table and a script pick the model and effort. No model tokens go into the decision.</div>
+    <div class="card"><b>Small main context</b><br>Each micro-task runs in its own subagent. Only a one-line status comes back.</div>
+    <div class="card"><b>Smart retries</b><br>The failure type decides: more effort, a stronger model, an environment fix, or a question to you.</div>
+    <div class="card"><b>Self-improving</b><br>Metrics after every batch. The improver tunes the table and writes lessons, with guardrails.</div>
+  </div>
+
+  <h2>1. How a run works</h2>
+  <div class="card"><pre class="mermaid">
+flowchart TD
+  A[Request] --> B[Draft plan]
+  B --> C[Ask max 4 questions]
+  C --> D[Plan v2 + digest]
+  D --> E[High-level tasks]
+  E --> F[decompose: micro-tasks + category + tier]
+  F --> G[route.py: model + effort]
+  G --> H[route-map.md]
+  H --> I[worker]
+  I -->|goal met| J[reviewer]
+  I -->|goal not met| K[route.py escalate]
+  J -->|PASS| L[done]
+  J -->|FAIL| K
+  K -->|stronger route + failure log| I
+  K -->|spec unclear| C
+  K -->|blocked| M[report]
+  L --> N[metrics + improver]
+  </pre></div>
+
+  <h2>2. The routing table</h2>
+  <div class="card">
+    <div class="legend"><span><i class="haiku"></i>Haiku</span><span><i class="sonnet"></i>Sonnet</span><span><i class="opus"></i>Opus</span><span><i class="fable"></i>Fable</span></div>
+    <table id="tbl"><thead><tr><th>Category</th><th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th></tr></thead><tbody></tbody></table>
+    <p style="color:var(--muted);font-size:14px;margin:10px 0 0">Default values. Your project copy lives in <code>.claude/routing/routing-table.json</code> and changes as the improver learns.</p>
+  </div>
+
+  <h3>Tier score: 4 questions, 0 to 2 points each</h3>
+  <div class="card"><table>
+    <tr><th>Question</th><th>0</th><th>1</th><th>2</th></tr>
+    <tr><td>Scope</td><td>1 file</td><td>2–4 files</td><td>cross-module</td></tr>
+    <tr><td>Clarity</td><td>known steps</td><td>some judgment</td><td>unknown cause / design</td></tr>
+    <tr><td>Risk</td><td>easy to undo</td><td>local bug</td><td>security, data, production</td></tr>
+    <tr><td>Verification</td><td>one command</td><td>several checks</td><td>manual / subtle</td></tr>
+  </table><p style="font-size:14px;color:var(--muted);margin:10px 0 0">Total 0–1 → T1 · 2–3 → T2 · 4–5 → T3 · 6–7 → T4 · 8 → T5. Risk 2 → at least T4.</p></div>
+
+  <h2>3. Retries</h2>
+  <div class="card"><pre class="mermaid">
+flowchart LR
+  F[Attempt failed] --> T{failure type}
+  T -->|depth / review| E[same model, more effort]
+  T -->|capability| M[next model]
+  T -->|environment| S[fix env, same route once]
+  T -->|spec| U[ask the user]
+  E --> C{attempt 3 done or ceiling?}
+  M --> C
+  C -->|no| R[retry with log]
+  C -->|yes| B[blocked, report]
+  </pre></div>
+
+  <h2>4. The improver loop</h2>
+  <div class="card"><pre class="mermaid">
+flowchart LR
+  A[Batch ends] --> B[collect: free]
+  B --> C{every 3 batches or end}
+  C --> D[report: stats per cell]
+  D --> E[improver agent]
+  E --> F[lessons.md]
+  E --> G[prompt / rubric proposals]
+  E --> H[veto bad changes]
+  H --> I[apply: new table version]
+  I -.->|next tasks| J[better routes]
+  </pre>
+  <ul>
+    <li>First pass below 60% → one ladder step up. Above 95% over 8+ tasks → one step down.</li>
+    <li>After a change, the cell counts only new data.</li>
+    <li>Every change is versioned. Undo with <code>metrics.py rollback</code>.</li>
+  </ul></div>
+
+  <h2>5. Install</h2>
+  <div class="card">
+    <b>Plugin</b>
+<pre>/plugin marketplace add Marco-Bonito/Claude_token_reduction_bundle
+/plugin install token-routing@token-routing</pre>
+    <b>Manual</b>
+<pre>git clone https://github.com/Marco-Bonito/Claude_token_reduction_bundle.git
+scripts/install.sh /path/to/project          # Windows: scripts\install.ps1</pre>
+    Then paste <code>plugins/token-routing/CLAUDE.routing.md</code> into your <code>CLAUDE.md</code>, and do not set <code>CLAUDE_CODE_EFFORT_LEVEL</code> or <code>CLAUDE_CODE_SUBAGENT_MODEL</code>.
+  </div>
+
+  <h2>6. Use</h2>
+  <div class="card"><ol class="steps">
+    <li>Type <code>/orchestrate &lt;request&gt;</code>. One goal per run.</li>
+    <li>Answer the questions. Each one has a recommended option.</li>
+    <li>Check the route map and cost profile. Correct a tier if it looks wrong. Say "go".</li>
+    <li>Follow <code>.claude/runs/&lt;run&gt;/route-map.md</code> if you want.</li>
+    <li>Read the improver summary at the end. Approve or reject the proposals.</li>
+    <li>Commit <code>.claude/routing/history/</code>. It is what your project learned.</li>
+  </ol>
+  <p>Also: <code>/decompose &lt;task&gt;</code> for only the breakdown, <code>/improve</code> to run the cycle now.</p></div>
+
+  <p style="color:var(--muted);font-size:14px;margin-top:40px">Source: <a href="https://github.com/Marco-Bonito/Claude_token_reduction_bundle">github.com/Marco-Bonito/Claude_token_reduction_bundle</a></p>
+</main>
+<script>
+  const ladder = ["haiku/low","haiku/medium","haiku/high","sonnet/low","sonnet/medium","sonnet/high","opus/medium","opus/high","opus/xhigh","fable/high"];
+  const cats = { explore:[0,0,1,3,4], ops:[0,0,1,2,4], browse:[0,1,1,2,4], docs:[1,3,3,4,5], test:[1,3,3,4,6],
+                 code:[1,3,3,5,7], refactor:[1,3,4,5,7], debug:[2,3,4,6,7], data:[2,4,4,6,7], architecture:[4,5,6,7,8] };
+  const tb = document.querySelector("#tbl tbody");
+  for (const [c, t] of Object.entries(cats)) {
+    tb.insertAdjacentHTML("beforeend", "<tr><td>" + c + "</td>" + t.map(i => {
+      const r = ladder[i]; return '<td class="r ' + r.split("/")[0] + '">' + r + "</td>"; }).join("") + "</tr>");
+  }
+</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral" });
+</script>
+</body>
+</html>

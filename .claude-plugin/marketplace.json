@@ -1,0 +1,18 @@
+{
+  "name": "token-routing",
+  "owner": { "name": "Marco Bonito", "url": "https://github.com/Marco-Bonito" },
+  "metadata": {
+    "description": "Token-efficient orchestration for Claude Code: per-task model and effort routing, reviewed retries, self-improving table.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "token-routing",
+      "source": "./plugins/token-routing",
+      "description": "Plan, decompose and route Claude Code work to the cheapest model and effort that succeeds, with reviewed retries and a self-improving routing table.",
+      "version": "1.0.0",
+      "category": "productivity",
+      "keywords": ["routing", "subagents", "token-usage", "cost"]
+    }
+  ]
+}
