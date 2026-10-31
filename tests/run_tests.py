@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 R = ROOT / "plugins" / "token-routing" / "routing"
 TMP = Path(tempfile.mkdtemp(prefix="token-routing-test-"))
-ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "TOKEN_ROUTING_DIR": str(TMP / "data"), "HOME": str(TMP / "home")}
+ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "TOKEN_ROUTING_DIR": str(TMP / "data"), "HOME": str(TMP / "home"), "USERPROFILE": str(TMP / "home")}
 FAILS = []
 for _s in (sys.stdout, sys.stderr):
     try:
