@@ -1,0 +1,75 @@
+name: community-aggregate
+
+# Weekly: combine all feedback, publish the report in the community-feedback branch,
+# and open a pull request with better default routes when the data supports it.
+# The pull request needs a maintainer review. Nothing changes main on its own.
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: community-aggregate
+  cancel-in-progress: false
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: community-feedback
+          path: data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Aggregate
+        run: |
+          mkdir -p data/submissions
+          python main/community/aggregate.py \
+            --submissions data/submissions \
+            --table main/plugins/token-routing/routing/defaults/routing-table.json \
+            --out data/aggregate --apply
+
+      - name: Publish report to community-feedback
+        working-directory: data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add aggregate
+          if git diff --cached --quiet; then echo "No change"; exit 0; fi
+          git commit -m "Update community aggregate report"
+          git push origin HEAD:community-feedback
+
+      - name: Open pull request with new defaults
+        working-directory: main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet; then echo "Defaults unchanged"; exit 0; fi
+          branch="community/defaults-$(date -u +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add plugins/token-routing/routing/defaults/routing-table.json
+          git commit -m "Update default routing table from community feedback"
+          git push -f origin "$branch"
+          {
+            echo "Automatic proposal from the weekly community aggregation."
+            echo
+            cat ../data/aggregate/report.md
+            echo
+            echo "Review the rubric findings too: they need a manual edit of \`skills/decompose/SKILL.md\`."
+          } > "$RUNNER_TEMP/pr.md"
+          gh pr create --base "${{ github.event.repository.default_branch }}" --head "$branch" \
+            --title "Community defaults update $(date -u +%Y-%m-%d)" --body-file "$RUNNER_TEMP/pr.md" \
+            || gh pr edit "$branch" --body-file "$RUNNER_TEMP/pr.md"

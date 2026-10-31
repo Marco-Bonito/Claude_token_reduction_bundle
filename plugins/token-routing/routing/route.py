@@ -6,6 +6,7 @@ Usage:
   route.py escalate <category> <model> <effort> <fail_type> <attempt_done>
   route.py reviewer <tier>
   route.py table                      # print the full first-route matrix
+  route.py where                      # print this variant's data folder
 
 Output: one JSON line, e.g. {"action":"run","model":"sonnet","effort":"low","ladder_index":3}
 action is one of: run | retry_same | ask_user | blocked
@@ -126,6 +127,9 @@ def main(argv):
         r = t["reviewer"]
         pick = r["upgrade_for_tier_5"] if tier >= 5 else r
         out({"action": "run", "model": pick["model"], "effort": pick["effort"]})
+
+    if cmd == "where":
+        out({"action": "where", "data_dir": str(TABLE.parent)})
 
     if cmd == "table":
         rows = []

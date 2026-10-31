@@ -5,7 +5,7 @@
 
 A Claude Code plugin that sends each task to the **cheapest model and effort level that can do it**, checks the result, retries with a stronger route only when needed, and **learns from every run**.
 
-**Visual guide:** [`docs/index.html`](docs/index.html) · **Token-saving guide:** [`docs/token-saving.md`](docs/token-saving.md)
+**Visual guide:** [`docs/index.html`](docs/index.html) · **Token-saving guide:** [`docs/token-saving.md`](docs/token-saving.md) · **Community feedback:** [`docs/community-feedback.md`](docs/community-feedback.md)
 
 ## Why
 
@@ -130,6 +130,16 @@ flowchart LR
 - **Tier drift:** tasks solved 2+ steps above their first route → the rubric underestimates them.
 - **Guardrails:** minimum samples, max 1 step per cycle, no automatic ceiling changes, only new data counts after a change, every change is versioned (`metrics.py rollback`), prompt changes need your approval.
 
+## Community feedback
+
+Share your anonymous results, and the defaults and the task classification get better for everyone:
+
+```
+python3 <plugin>/routing/community.py export     # anonymous counts only
+```
+
+Then submit it with the [issue form](https://github.com/Marco-Bonito/Claude_token_reduction_bundle/issues/new?template=routing-feedback.yml). A bot validates it and stores it in the `community-feedback` branch. Every week, a workflow combines all submissions and opens a pull request with better default routes, plus a report on which tier-score components the rubric gets wrong. `/improve` adopts new defaults for the cells you never tuned. Details: [docs/community-feedback.md](docs/community-feedback.md).
+
 ## Where things live
 
 | Location | Content |
@@ -146,8 +156,9 @@ plugins/token-routing/
   .claude-plugin/plugin.json
   skills/      orchestrate, decompose, improve
   agents/      worker, reviewer, improver
-  routing/     route.py, route_map.py, metrics.py, _paths.py, defaults/, templates/
+  routing/     route.py, route_map.py, metrics.py, community.py, _paths.py, defaults/, templates/
   CLAUDE.routing.md
+community/     validate.py, aggregate.py (run by GitHub Actions)
 scripts/       install.sh, install.ps1
 tests/         run_tests.py (end-to-end, no dependencies)
 docs/          index.html (visual guide), token-saving.md

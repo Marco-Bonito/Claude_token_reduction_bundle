@@ -107,7 +107,7 @@ def collect(run_dir):
                     "task_status": task.get("status"), "log": a.get("log"),
                     "tokens": a.get("tokens"), "tool_uses": a.get("tool_uses"),
                     "duration_s": a.get("duration_s"), "agent_id": a.get("agent_id"),
-                    "table_version": t.get("version", 1),
+                    "table_version": t.get("version", 1), "score": task.get("score"),
                 }
                 if rec["log"] and not os.path.isabs(rec["log"]):
                     rec["log"] = str(Path(run_dir) / rec["log"])
@@ -149,12 +149,14 @@ def report():
     cfg = t["improver"]
     w = cfg["cost_weights"]
     state = t.setdefault("improver_state", {}).setdefault("cell_version", {})
+    fresh_since = t["improver_state"].get("fresh_since", {})
     rows = read_metrics()
     if not rows:
         print(json.dumps({"error": "no metrics yet; run collect first"}))
         return
     # Keep only rows newer than the last change of their cell.
-    fresh = [r for r in rows if r["table_version"] >= state.get(cell_key(r["category"], r["tier"]), 0)]
+    fresh = [r for r in rows if r["table_version"] >= max(state.get(cell_key(r["category"], r["tier"]), 0),
+                                                          fresh_since.get(cell_key(r["category"], r["tier"]), 0))]
     tasks = task_view(fresh)
     for tk in tasks:
         tk["cost"] = round(sum((a.get("tokens") or 0) / 1000 * w.get(a["model"], 1) for a in tk["rows"]), 1)
@@ -293,12 +295,14 @@ def rollback(version):
     (VERSIONS / f"v{cur}.json").write_text(TABLE.read_text(encoding="utf-8"), encoding="utf-8")
     restored = json.loads(src.read_text(encoding="utf-8"))
     restored["version"] = cur + 1  # versions only go up, so metrics stay comparable
-    cv = restored.setdefault("improver_state", {}).setdefault("cell_version", {})
+    # The restored cells keep the tuning state of the old version. Only mark them fresh,
+    # so data collected under the undone route does not judge the restored one.
+    fresh = restored.setdefault("improver_state", {}).setdefault("fresh_since", {})
     for cat, c in restored["categories"].items():
         now_tiers = t["categories"].get(cat, {}).get("tiers", [])
         for i, idx in enumerate(c["tiers"]):
             if i >= len(now_tiers) or now_tiers[i] != idx:
-                cv[cell_key(cat, i + 1)] = cur + 1
+                fresh[cell_key(cat, i + 1)] = cur + 1
     save_table(restored)
     with (HIST / "CHANGELOG.md").open("a", encoding="utf-8") as f:
         f.write(f"\n## v{cur + 1} — {now()} rollback to the content of v{target}\n")

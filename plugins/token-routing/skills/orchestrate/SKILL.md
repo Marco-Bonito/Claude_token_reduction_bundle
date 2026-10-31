@@ -12,7 +12,7 @@ You do not do the task work yourself. Workers do it.
 
 Run folder: `.claude/runs/<YYYY-MM-DD>-<short-slug>/`. Create it first.
 Scripts folder: `${CLAUDE_SKILL_DIR}/../../routing`. In every command below, `route.py`, `route_map.py` and `metrics.py` mean `python3 "${CLAUDE_SKILL_DIR}/../../routing/<script>"`. Write the full path in each command, because each shell call starts fresh. On Windows without `python3`, use `python` or `py`.
-Project data (table, lessons, history) is in `<project>/.claude/routing/`. The scripts create it on first use.
+Project data (table, lessons, history) is in the data folder that `route.py where` prints: `<project>/.claude/routing/`, or `.claude/routing-personal/` for the personal variant. The scripts create it on first use.
 Names: in a plugin install, agents and skills can have the prefix `token-routing:` (for example `token-routing:worker`). Use the name that is in your agent and skill list.
 
 ## Hard rules

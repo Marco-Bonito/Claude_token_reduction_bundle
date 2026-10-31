@@ -1,0 +1,94 @@
+name: feedback-intake
+
+# Validates a "Routing feedback" issue and stores it in the community-feedback branch.
+# The issue body is untrusted. It is passed through an environment variable and a file,
+# never interpolated into a shell command, and parsed only as JSON.
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: feedback-intake
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    if: >-
+      github.event.issue.state == 'open' &&
+      (contains(github.event.issue.labels.*.name, 'routing-feedback') || startsWith(github.event.issue.title, 'Routing feedback'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tools (default branch)
+        uses: actions/checkout@v4
+        with:
+          path: tool
+
+      - name: Check out data branch
+        uses: actions/checkout@v4
+        with:
+          ref: community-feedback
+          path: data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate and store
+        id: validate
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          printf '%s' "$ISSUE_BODY" > "$RUNNER_TEMP/body.md"
+          set +e
+          python tool/community/validate.py --issue-body "$RUNNER_TEMP/body.md" --write data/submissions > "$RUNNER_TEMP/result.txt"
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/result.txt"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Commit to community-feedback
+        if: steps.validate.outputs.code == '0'
+        working-directory: data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add submissions
+          if git diff --cached --quiet; then echo "No change"; exit 0; fi
+          git commit -m "Add routing feedback from issue #${{ github.event.issue.number }}"
+          git push origin HEAD:community-feedback
+
+      - name: Reply and close (valid)
+        if: steps.validate.outputs.code == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          {
+            echo "Thank you! Your feedback is valid and stored in the \`community-feedback\` branch."
+            echo
+            echo '```'; cat "$RUNNER_TEMP/result.txt"; echo '```'
+            echo
+            echo "It counts in the next weekly aggregation. Export again later to replace it with newer data."
+          } > "$RUNNER_TEMP/reply.md"
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/reply.md"
+          gh issue close "$NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+
+      - name: Reply (invalid)
+        if: steps.validate.outputs.code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          {
+            echo "The feedback could not be stored:"
+            echo
+            echo '```'; cat "$RUNNER_TEMP/result.txt"; echo '```'
+            echo
+            echo "Please paste the unchanged content of \`community-export.json\` and edit this issue. The check runs again."
+          } > "$RUNNER_TEMP/reply.md"
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/reply.md"

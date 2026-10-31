@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "defaults_version": 1,
   "notes": [
     "Edit this file to tune cost vs quality. Scripts read it at every call.",
     "ladder = ordered list of (model, effort), cheapest first.",
@@ -62,6 +63,19 @@
     "auto_apply_prompts": false,
     "cost_weights_note": "Relative cost per 1k tokens. Only the ratios matter. Update them when prices change.",
     "cost_weights": { "haiku": 1, "sonnet": 3, "opus": 5, "fable": 10 },
-    "transcripts_glob": "~/.claude/projects/*/*/subagents/agent-{agent_id}.jsonl"
+    "transcripts_glob": "~/.claude/projects/*/*/subagents/agent-{agent_id}.jsonl",
+    "personal_repo_note": "Optional: OWNER/NAME of YOUR private repo. /improve then sends this project's results and lessons there after each cycle.",
+    "personal_repo": null,
+    "community_auto_share_note": "true = /improve runs community.py submit-community after each cycle, without asking.",
+    "community_auto_share": false
+  },
+  "community": {
+    "note": "Rules for community/aggregate.py, which tunes these defaults from shared feedback.",
+    "min_contributors": 3,
+    "min_tasks": 30,
+    "cap_per_contributor": 50,
+    "max_step": 1,
+    "rubric_min_tasks": 30,
+    "rubric_drift": 0.75
   }
 }
