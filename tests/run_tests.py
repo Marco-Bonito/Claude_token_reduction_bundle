@@ -82,7 +82,7 @@ for r in range(3):
         atts = [{"n": 1, "model": "sonnet", "effort": "low", "result": "fail" if fail else "pass", "fail_type": "depth" if fail else None, "log": f"logs/C{i}-a1.md", "tokens": 40000}]
         if fail:
             atts.append({"n": 2, "model": "sonnet", "effort": "medium", "result": "pass", "tokens": 30000, "agent_id": "abc123" if r == 0 and i == 0 else None})
-        tasks.append({"id": f"C{i}", "parent": "H1", "title": "c", "goal": "g", "acceptance": "a", "category": "code", "tier": 3, "deps": [], "status": "done", "attempts": atts})
+        tasks.append({"id": f"C{i}", "parent": "H1", "title": "c", "goal": "g", "acceptance": "a", "category": "code", "tier": 3, "score": "S1 C1 R1 V1 = 4", "deps": [], "status": "done", "attempts": atts})
     tasks.append({"id": "R1", "parent": "H1", "title": "r", "goal": "g", "acceptance": "a", "category": "code", "tier": 3, "deps": [], "status": "running",
                   "attempts": [{"n": 1, "model": "sonnet", "effort": "low", "result": "fail"}]})
     make_run(f"run{r}", tasks)
@@ -100,6 +100,76 @@ js("metrics.py", "report")
 check("old data ignored after change", "code:T3" not in (TMP / "data" / "history" / "report.md").read_text())
 check("rollback → v3", js("metrics.py", "rollback")["version"] == 3)
 check("route restored", js("route.py", "base", "code", 3)["effort"] == "low")
+
+# ---- community: export → validate → aggregate → sync
+import shutil  # noqa: E402
+C = ROOT / "community"
+out = run("community.py", "export")
+exp = TMP / "data" / "history" / "community-export.json"
+check("export written", exp.exists(), out)
+doc = json.loads(exp.read_text())
+check("export has no private fields", "C0" not in exp.read_text() and "logs/" not in exp.read_text() and "run0" not in exp.read_text())
+check("export cell counts", doc["cells"]["code:3"]["tasks"] == 9 and doc["cells"]["code:3"]["first_pass"] == 3, doc["cells"].get("code:3"))
+check("export score buckets", doc["scores"].get("code:3:S1 C1 R1 V1", {}).get("tasks") == 9, list(doc["scores"]))
+
+
+def validate(*args):
+    p = subprocess.run([sys.executable, str(C / "validate.py"), *map(str, args)], capture_output=True, text=True, env=ENV)
+    return p.returncode, p.stdout.strip()
+
+
+check("export validates", validate(exp)[0] == 0, validate(exp))
+check("issue body validates", validate("--issue-body", TMP / "data" / "history" / "community-issue.md")[0] == 0)
+bad_cases = {
+    "extra key": {**doc, "title": "x"},
+    "bad route": {**doc, "cells": {"code:3": {**doc["cells"]["code:3"], "win_routes": {"$(rm -rf /)/low": 1}}}},
+    "bad cell": {**doc, "cells": {"code:9": doc["cells"]["code:3"]}},
+    "first_pass > tasks": {**doc, "cells": {"code:3": {**doc["cells"]["code:3"], "first_pass": 99}}},
+    "bad contributor": {**doc, "contributor": "me"},
+}
+for name, bad in bad_cases.items():
+    f = TMP / "bad.json"
+    f.write_text(json.dumps(bad))
+    check(f"rejects {name}", validate(f)[0] == 1)
+subs = TMP / "subs"
+for k in range(3):
+    d = {**doc, "contributor": f"0000000{k}-0000-4000-8000-000000000000"}
+    f = TMP / f"s{k}.json"
+    f.write_text(json.dumps(d))
+    validate(f, "--write", subs)
+validate(TMP / "s0.json", "--write", subs)  # same contributor again → replaces, not adds
+check("one file per contributor", len(list(subs.glob("*.json"))) == 3)
+deftable = TMP / "defaults"
+shutil.copytree(R / "defaults", deftable)
+cfg = json.loads((deftable / "routing-table.json").read_text())
+cfg["community"]["min_tasks"] = 20
+(deftable / "routing-table.json").write_text(json.dumps(cfg))
+p = subprocess.run([sys.executable, str(C / "aggregate.py"), "--submissions", subs, "--table", deftable / "routing-table.json",
+                    "--out", TMP / "agg", "--apply"], capture_output=True, text=True, env=ENV)
+res = json.loads(p.stdout.strip().splitlines()[-1]) if p.returncode == 0 else {}
+check("aggregate runs", p.returncode == 0, p.stderr[-300:])
+check("aggregate proposes code:3 raise", res.get("proposals") == 1 and res.get("defaults_version") == 2, res)
+agg = json.loads((TMP / "agg" / "aggregate.json").read_text())
+check("contributor cap applied", agg["cells"][0]["tasks"] == 27.0, agg["cells"][0])
+comp = {r["component"]: r for r in agg["rubric_components"]}
+check("rubric drift found", comp.get("C=1", {}).get("avg_drift", 0) > 0, comp.get("C=1"))
+newdef = json.loads((deftable / "routing-table.json").read_text())
+check("defaults updated", newdef["categories"]["code"]["tiers"][2] == 4)
+ENV["TOKEN_ROUTING_DEFAULTS"] = str(deftable)
+js("route.py", "base", "code", 3)  # still seeded table
+s1 = js("community.py", "sync-defaults")
+check("sync adopts community default", s1.get("synced", 0) >= 1 and js("route.py", "base", "code", 3)["effort"] == "medium", s1)
+check("sync is idempotent", js("community.py", "sync-defaults").get("synced") == 0)
+tbl_path = TMP / "data" / "routing-table.json"
+tbl = json.loads(tbl_path.read_text())
+tbl.setdefault("improver_state", {}).setdefault("cell_version", {})["debug:4"] = 99
+tbl["categories"]["debug"]["tiers"][3] = 7
+tbl_path.write_text(json.dumps(tbl))
+newdef["categories"]["debug"]["tiers"][3] = 5
+newdef["defaults_version"] = 3
+(deftable / "routing-table.json").write_text(json.dumps(newdef))
+js("community.py", "sync-defaults")
+check("sync keeps locally tuned cells", js("route.py", "base", "debug", 4)["model"] == "opus")
 
 print(f"\n{'ALL PASSED' if not FAILS else f'{len(FAILS)} FAILED'}  (temp: {TMP})")
 sys.exit(1 if FAILS else 0)

@@ -1,0 +1,30 @@
+name: Routing feedback
+description: Share your anonymous routing results to improve the default table and the task classification for everyone.
+title: "Routing feedback"
+labels: ["routing-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Your data improves the defaults for all users.
+
+        1. In your project, run: `python3 <plugin>/routing/community.py export`
+        2. Open `.claude/routing/history/community-export.json` and check it. It contains only counts, categories, tiers and `model/effort` names.
+        3. Paste the full file below.
+
+        A bot validates the data, stores it in the `community-feedback` branch, and closes this issue. A new export from you replaces your older one.
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback JSON
+      description: The full content of community-export.json.
+      render: json
+    validations:
+      required: true
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Consent
+      options:
+        - label: I checked the file. It has no private data, and I agree to publish it under the MIT license of this repository.
+          required: true

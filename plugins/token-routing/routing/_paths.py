@@ -20,7 +20,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 PKG = Path(__file__).resolve().parent
-DEFAULTS = PKG / "defaults"
+DEFAULTS = Path(os.environ["TOKEN_ROUTING_DEFAULTS"]) if os.environ.get("TOKEN_ROUTING_DEFAULTS") else PKG / "defaults"
 TEMPLATES = PKG / "templates"
 SEEDED = ("routing-table.json", "lessons.md")
 
