@@ -9,7 +9,15 @@ On first use, the defaults are copied into the project data folder.
 """
 import os
 import shutil
+import sys
 from pathlib import Path
+
+# Windows consoles default to cp1252 and crash on characters such as "→". Force UTF-8 output.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 PKG = Path(__file__).resolve().parent
 DEFAULTS = PKG / "defaults"
