@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "notes": [
+    "Edit this file to tune cost vs quality. Scripts read it at every call.",
+    "ladder = ordered list of (model, effort), cheapest first.",
+    "categories.<name>.tiers = ladder index for tier 1..5 (first route).",
+    "categories.<name>.ceiling = highest ladder index this category may reach on retry.",
+    "Effort levels available depend on the model. If a level is not supported, Claude Code uses the nearest one."
+  ],
+  "ladder": [
+    { "model": "haiku",  "effort": "low" },
+    { "model": "haiku",  "effort": "medium" },
+    { "model": "haiku",  "effort": "high" },
+    { "model": "sonnet", "effort": "low" },
+    { "model": "sonnet", "effort": "medium" },
+    { "model": "sonnet", "effort": "high" },
+    { "model": "opus",   "effort": "medium" },
+    { "model": "opus",   "effort": "high" },
+    { "model": "opus",   "effort": "xhigh" },
+    { "model": "fable",  "effort": "high" }
+  ],
+  "tiers": {
+    "1": "Trivial. One step, no judgment. Rename, run a known command, read one file.",
+    "2": "Low. Few steps, clear path, one file. Small fix with a known cause.",
+    "3": "Mid. Several steps or files. Some judgment. Normal feature slice.",
+    "4": "High. Cross-module, unclear cause, edge cases, performance or concurrency.",
+    "5": "Critical. Security, data loss risk, architecture, irreversible changes."
+  },
+  "categories": {
+    "explore":      { "desc": "Read and search the codebase, summarize findings.",          "tiers": [0, 0, 1, 3, 4], "ceiling": 5 },
+    "ops":          { "desc": "Operate the terminal: install, build, run, git, deploy steps.", "tiers": [0, 0, 1, 2, 4], "ceiling": 5 },
+    "browse":       { "desc": "Web browsing and web research.",                              "tiers": [0, 1, 1, 2, 4], "ceiling": 5 },
+    "docs":         { "desc": "Write docs, comments, READMEs, changelogs.",                  "tiers": [1, 3, 3, 4, 5], "ceiling": 6 },
+    "test":         { "desc": "Write or fix tests.",                                         "tiers": [1, 3, 3, 4, 6], "ceiling": 7 },
+    "code":         { "desc": "Implement a feature or a change.",                            "tiers": [1, 3, 3, 5, 7], "ceiling": 8 },
+    "refactor":     { "desc": "Change structure without changing behavior.",                 "tiers": [1, 3, 4, 5, 7], "ceiling": 8 },
+    "debug":        { "desc": "Find the cause of a bug and fix it.",                         "tiers": [2, 3, 4, 6, 7], "ceiling": 9 },
+    "data":         { "desc": "SQL, migrations, RLS policies, data pipelines.",              "tiers": [2, 4, 4, 6, 7], "ceiling": 9 },
+    "architecture": { "desc": "Design decisions, interfaces, system structure.",             "tiers": [4, 5, 6, 7, 8], "ceiling": 9 }
+  },
+  "retry": {
+    "max_retries": 2,
+    "fail_types": {
+      "depth":       { "step": "effort", "desc": "Right approach, but incomplete: missed edge cases, partial work, shallow check." },
+      "capability":  { "step": "model",  "desc": "Wrong approach or wrong understanding. More effort on the same model will not help." },
+      "review":      { "step": "effort", "desc": "Worker said done, reviewer rejected it." },
+      "environment": { "step": "same",   "desc": "Missing tool, dependency, permission, flaky network. Fix the environment, retry the same route once." },
+      "spec":        { "step": "stop",   "desc": "Goal or acceptance check is unclear or contradictory. Ask the user. Do not retry." }
+    },
+    "default_fail_type": "depth"
+  },
+  "reviewer": { "model": "sonnet", "effort": "low", "upgrade_for_tier_5": { "model": "opus", "effort": "medium" } },
+  "improver": {
+    "route": { "model": "sonnet", "effort": "medium" },
+    "run_every_n_batches": 3,
+    "min_samples": 5,
+    "raise_if_first_pass_below": 0.6,
+    "lower_if_first_pass_above": 0.95,
+    "lower_min_samples": 8,
+    "max_step_per_cycle": 1,
+    "auto_apply_table": true,
+    "auto_apply_prompts": false,
+    "cost_weights_note": "Relative cost per 1k tokens. Only the ratios matter. Update them when prices change.",
+    "cost_weights": { "haiku": 1, "sonnet": 3, "opus": 5, "fable": 10 },
+    "transcripts_glob": "~/.claude/projects/*/*/subagents/agent-{agent_id}.jsonl"
+  }
+}

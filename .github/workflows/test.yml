@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Validate JSON manifests
+        run: python -c "import json; [json.load(open(p, encoding='utf-8')) for p in ['.claude-plugin/marketplace.json', 'plugins/token-routing/.claude-plugin/plugin.json', 'plugins/token-routing/routing/defaults/routing-table.json']]"
+      - name: End-to-end tests
+        run: python tests/run_tests.py

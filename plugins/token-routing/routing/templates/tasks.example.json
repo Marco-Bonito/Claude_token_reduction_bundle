@@ -1,0 +1,40 @@
+{
+  "run_id": "2026-10-31-auth-refresh",
+  "goal": "Add token refresh to the Flutter auth flow",
+  "plan_digest": "Flutter + Supabase app. Add silent token refresh in AuthRepository. Keep the public API the same. Tests with mocktail. No UI changes.",
+  "high_level": [
+    { "id": "H1", "title": "Understand current auth flow" },
+    { "id": "H2", "title": "Implement refresh" },
+    { "id": "H3", "title": "Tests and docs" }
+  ],
+  "tasks": [
+    {
+      "id": "T1", "parent": "H1", "title": "Map auth code",
+      "goal": "A short map of the files and calls in the auth flow exists in the log.",
+      "acceptance": "Log lists every file that calls supabase.auth, with line numbers.",
+      "category": "explore", "tier": 1, "deps": [], "files": [],
+      "route": { "model": "haiku", "effort": "low" }, "status": "todo", "attempts": []
+    },
+    {
+      "id": "T2", "parent": "H2", "title": "Add refresh logic",
+      "goal": "AuthRepository refreshes the session before expiry without user action.",
+      "acceptance": "flutter analyze lib/auth && flutter test test/auth",
+      "category": "code", "tier": 3, "deps": ["T1"], "files": ["lib/auth/auth_repository.dart"],
+      "route": { "model": "sonnet", "effort": "low" }, "status": "todo", "attempts": []
+    },
+    {
+      "id": "T3", "parent": "H3", "title": "Tests for refresh",
+      "goal": "Unit tests cover refresh success, refresh failure and expired token.",
+      "acceptance": "flutter test test/auth/refresh_test.dart passes, 3+ cases",
+      "category": "test", "tier": 3, "deps": ["T2"], "files": ["test/auth/refresh_test.dart"],
+      "route": { "model": "sonnet", "effort": "low" }, "status": "todo", "attempts": []
+    },
+    {
+      "id": "T4", "parent": "H3", "title": "Update auth README",
+      "goal": "README section explains the refresh behavior.",
+      "acceptance": "docs/auth.md has a 'Token refresh' section that matches the code.",
+      "category": "docs", "tier": 1, "deps": ["T2"], "files": ["docs/auth.md"],
+      "route": { "model": "haiku", "effort": "medium" }, "status": "todo", "attempts": []
+    }
+  ]
+}
