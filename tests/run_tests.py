@@ -190,5 +190,19 @@ s2 = js("community.py", "sync-defaults")
 check("sync adds new lessons", s2.get("lessons_added") == 1 and "Run the linter" in (TMP / "data" / "lessons.md").read_text(), s2)
 check("lessons sync idempotent", js("community.py", "sync-defaults").get("lessons_added") == 0)
 
+# ---- variants keep separate data folders
+import shutil as _sh  # noqa: E402
+vroot = TMP / "variant"
+_sh.copytree(ROOT / "plugins" / "token-routing", vroot / "plug")
+pj = json.loads((vroot / "plug" / ".claude-plugin" / "plugin.json").read_text())
+pj["name"] = "token-routing-personal"
+(vroot / "plug" / ".claude-plugin" / "plugin.json").write_text(json.dumps(pj))
+(vroot / "proj" / ".git").mkdir(parents=True)
+env2 = {k: v for k, v in ENV.items() if k not in ("TOKEN_ROUTING_DIR", "TOKEN_ROUTING_DEFAULTS")}
+w1 = subprocess.run([sys.executable, str(vroot / "plug" / "routing" / "route.py"), "where"], capture_output=True, text=True, env=env2, cwd=vroot / "proj").stdout
+w2 = subprocess.run([sys.executable, str(R / "route.py"), "where"], capture_output=True, text=True, env=env2, cwd=vroot / "proj").stdout
+check("personal variant uses .claude/routing-personal", json.loads(w1)["data_dir"].endswith(str(Path(".claude") / "routing-personal")), w1)
+check("community variant uses .claude/routing", json.loads(w2)["data_dir"].endswith(str(Path(".claude") / "routing")), w2)
+
 print(f"\n{'ALL PASSED' if not FAILS else f'{len(FAILS)} FAILED'}  (temp: {TMP})")
 sys.exit(1 if FAILS else 0)

@@ -1,7 +1,8 @@
 """Path resolution shared by the routing scripts.
 
 Code lives in the plugin (read-only). Data lives in the project, so each project learns on its own:
-  <project root>/.claude/routing/   routing-table.json, lessons.md, history/
+  <project root>/.claude/routing/            routing-table.json, lessons.md, history/   (token-routing)
+  <project root>/.claude/routing-personal/   same, for the token-routing-personal variant
 
 Project root = the nearest folder with .git above the current directory, else the current directory.
 Override with the TOKEN_ROUTING_DIR environment variable.
@@ -33,9 +34,22 @@ def project_root() -> Path:
     return cwd
 
 
+def variant() -> str:
+    """'' for token-routing, 'personal' for token-routing-personal, from the plugin manifest."""
+    try:
+        import json
+        name = json.loads((PKG.parent / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["name"]
+    except (OSError, ValueError, KeyError):
+        return ""
+    return name[len("token-routing-"):] if name.startswith("token-routing-") else ""
+
+
 def data_dir() -> Path:
+    """Each plugin variant has its own data folder, so variants never mix their learning:
+    token-routing -> .claude/routing/, token-routing-personal -> .claude/routing-personal/"""
     env = os.environ.get("TOKEN_ROUTING_DIR")
-    d = Path(env).expanduser() if env else project_root() / ".claude" / "routing"
+    sub = "routing" + (f"-{variant()}" if variant() else "")
+    d = Path(env).expanduser() if env else project_root() / ".claude" / sub
     d.mkdir(parents=True, exist_ok=True)
     for name in SEEDED:
         if not (d / name).exists():

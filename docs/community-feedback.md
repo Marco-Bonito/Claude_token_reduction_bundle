@@ -61,6 +61,17 @@ Rubric findings need a human edit of `plugins/token-routing/skills/decompose/SKI
 - Nothing changes `main` without a maintainer merging the pull request.
 - `sync-defaults` never overwrites a cell that your own improver tuned.
 
+## Variants: community and personal
+
+The plugin can run as two separate variants. Each one has its own data folder in your project, so their learning never mixes.
+
+| Variant | Plugin name | Data folder | Defaults learned from |
+|---|---|---|---|
+| Community (this repo, public) | `token-routing` | `.claude/routing/` | all users who share feedback |
+| Personal (a private repo of yours) | `token-routing-personal` | `.claude/routing-personal/` | only your own projects |
+
+For the personal variant, set `improver.personal_repo` to your private repo. `/improve` then runs `community.py submit-personal` after every cycle. This command refuses the public repo as a target. Set `improver.community_auto_share: true` to also send your anonymous counts to the community automatically.
+
 ## Maintainer setup (once)
 
 1. Create the label `routing-feedback`. The issue form adds it.
