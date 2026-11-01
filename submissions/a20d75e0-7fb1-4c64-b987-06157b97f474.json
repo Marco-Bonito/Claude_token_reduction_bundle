@@ -29,17 +29,56 @@
      "sonnet/medium": 1
     }
    },
+   "code:3": {
+    "avg_tokens": 123179,
+    "fail_types": {},
+    "first_pass": 2,
+    "first_routes": {
+     "sonnet/low": 2
+    },
+    "solved": 2,
+    "tasks": 2,
+    "win_routes": {
+     "sonnet/low": 2
+    }
+   },
    "code:4": {
-    "avg_tokens": 135705,
+    "avg_tokens": 191839,
+    "fail_types": {},
+    "first_pass": 2,
+    "first_routes": {
+     "sonnet/high": 2
+    },
+    "solved": 2,
+    "tasks": 2,
+    "win_routes": {
+     "sonnet/high": 2
+    }
+   },
+   "docs:1": {
+    "avg_tokens": 148035,
     "fail_types": {},
     "first_pass": 1,
     "first_routes": {
-     "sonnet/high": 1
+     "haiku/medium": 1
     },
     "solved": 1,
     "tasks": 1,
     "win_routes": {
-     "sonnet/high": 1
+     "haiku/medium": 1
+    }
+   },
+   "ops:2": {
+    "avg_tokens": 152936,
+    "fail_types": {},
+    "first_pass": 1,
+    "first_routes": {
+     "haiku/low": 1
+    },
+    "solved": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/low": 1
     }
    },
    "ops:3": {
@@ -75,11 +114,39 @@
      "sonnet/medium": 1
     }
    },
+   "code:3:S2 C1 R0 V1": {
+    "first_pass": 2,
+    "tasks": 2,
+    "win_routes": {
+     "sonnet/low": 2
+    }
+   },
    "code:4:S1 C1 R2 V1": {
     "first_pass": 1,
     "tasks": 1,
     "win_routes": {
      "sonnet/high": 1
+    }
+   },
+   "code:4:S2 C2 R1 V2": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "sonnet/high": 1
+    }
+   },
+   "docs:1:S0 C0 R0 V1": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/medium": 1
+    }
+   },
+   "ops:2:S1 C1 R0 V0": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/low": 1
     }
    },
    "ops:3:S2 C1 R0 V1": {
@@ -92,5 +159,5 @@
   },
   "table_version": 1
  },
- "received": "2026-11-01T08:10:21Z"
+ "received": "2026-11-01T09:04:42Z"
 }
