@@ -15,17 +15,18 @@
     }
    },
    "code:2": {
-    "avg_tokens": 92876,
+    "avg_tokens": 83315,
     "fail_types": {
      "depth": 1
     },
-    "first_pass": 0,
+    "first_pass": 1,
     "first_routes": {
-     "sonnet/low": 1
+     "sonnet/low": 2
     },
-    "solved": 1,
-    "tasks": 1,
+    "solved": 2,
+    "tasks": 2,
     "win_routes": {
+     "sonnet/low": 1,
      "sonnet/medium": 1
     }
    },
@@ -43,28 +44,31 @@
     }
    },
    "code:4": {
-    "avg_tokens": 191839,
+    "avg_tokens": 133869,
     "fail_types": {},
-    "first_pass": 2,
+    "first_pass": 4,
     "first_routes": {
-     "sonnet/high": 2
+     "sonnet/high": 4
+    },
+    "solved": 4,
+    "tasks": 4,
+    "win_routes": {
+     "sonnet/high": 4
+    }
+   },
+   "docs:1": {
+    "avg_tokens": 195331,
+    "fail_types": {
+     "depth": 1
+    },
+    "first_pass": 1,
+    "first_routes": {
+     "haiku/medium": 2
     },
     "solved": 2,
     "tasks": 2,
     "win_routes": {
-     "sonnet/high": 2
-    }
-   },
-   "docs:1": {
-    "avg_tokens": 148035,
-    "fail_types": {},
-    "first_pass": 1,
-    "first_routes": {
-     "haiku/medium": 1
-    },
-    "solved": 1,
-    "tasks": 1,
-    "win_routes": {
+     "haiku/high": 1,
      "haiku/medium": 1
     }
    },
@@ -114,6 +118,13 @@
      "sonnet/medium": 1
     }
    },
+   "code:2:S1 C1 R0 V1": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "sonnet/low": 1
+    }
+   },
    "code:3:S2 C1 R0 V1": {
     "first_pass": 2,
     "tasks": 2,
@@ -122,6 +133,13 @@
     }
    },
    "code:4:S1 C1 R2 V1": {
+    "first_pass": 2,
+    "tasks": 2,
+    "win_routes": {
+     "sonnet/high": 2
+    }
+   },
+   "code:4:S1 C2 R1 V2": {
     "first_pass": 1,
     "tasks": 1,
     "win_routes": {
@@ -137,8 +155,9 @@
    },
    "docs:1:S0 C0 R0 V1": {
     "first_pass": 1,
-    "tasks": 1,
+    "tasks": 2,
     "win_routes": {
+     "haiku/high": 1,
      "haiku/medium": 1
     }
    },
@@ -159,5 +178,5 @@
   },
   "table_version": 1
  },
- "received": "2026-11-01T09:04:42Z"
+ "received": "2026-11-01T10:29:37Z"
 }
