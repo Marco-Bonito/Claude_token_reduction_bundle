@@ -1,0 +1,96 @@
+{
+ "data": {
+  "cells": {
+   "browse:2": {
+    "avg_tokens": 263276,
+    "fail_types": {},
+    "first_pass": 1,
+    "first_routes": {
+     "haiku/medium": 1
+    },
+    "solved": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/medium": 1
+    }
+   },
+   "code:2": {
+    "avg_tokens": 92876,
+    "fail_types": {
+     "depth": 1
+    },
+    "first_pass": 0,
+    "first_routes": {
+     "sonnet/low": 1
+    },
+    "solved": 1,
+    "tasks": 1,
+    "win_routes": {
+     "sonnet/medium": 1
+    }
+   },
+   "code:4": {
+    "avg_tokens": 135705,
+    "fail_types": {},
+    "first_pass": 1,
+    "first_routes": {
+     "sonnet/high": 1
+    },
+    "solved": 1,
+    "tasks": 1,
+    "win_routes": {
+     "sonnet/high": 1
+    }
+   },
+   "ops:3": {
+    "avg_tokens": 185881,
+    "fail_types": {},
+    "first_pass": 1,
+    "first_routes": {
+     "haiku/medium": 1
+    },
+    "solved": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/medium": 1
+    }
+   }
+  },
+  "contributor": "a20d75e0-7fb1-4c64-b987-06157b97f474",
+  "defaults_version": 1,
+  "plugin_version": "1.1.0-personal.4",
+  "schema": "token-routing-feedback/1",
+  "scores": {
+   "browse:2:S0 C1 R0 V1": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/medium": 1
+    }
+   },
+   "code:2:S1 C0 R1 V0": {
+    "first_pass": 0,
+    "tasks": 1,
+    "win_routes": {
+     "sonnet/medium": 1
+    }
+   },
+   "code:4:S1 C1 R2 V1": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "sonnet/high": 1
+    }
+   },
+   "ops:3:S2 C1 R0 V1": {
+    "first_pass": 1,
+    "tasks": 1,
+    "win_routes": {
+     "haiku/medium": 1
+    }
+   }
+  },
+  "table_version": 1
+ },
+ "received": "2026-11-01T08:10:21Z"
+}
